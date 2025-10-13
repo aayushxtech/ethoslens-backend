@@ -39,3 +39,6 @@ dist/
 # Database files
 *.db
 *.sqlite
+
+# Uploads and media
+uploads/

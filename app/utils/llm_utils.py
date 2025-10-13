@@ -19,7 +19,7 @@ def _get_client() -> Groq:
     return _client
 
 
-def call_llm(prompt: str, model: str = "llama-3.1-8b-instant", temperature: float = 0.2) -> str:
+def call_llm(prompt: str, model: str = "llama-3.3-70b-versatile", temperature: float = 0.2) -> str:
     """
     Calls a Groq LLM with the given prompt and returns the response text.
     Client is initialized lazily using app.config.settings.

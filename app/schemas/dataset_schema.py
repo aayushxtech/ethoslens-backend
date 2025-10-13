@@ -29,8 +29,8 @@ class DatasetResponse(BaseModel):
 
 
 class ColumnSuggestion(BaseModel):
-    target_column: str
-    sensitive_column: str
+    target_column: Optional[str] = None
+    sensitive_columns: List[str] = []
 
     class Config:
         orm_mode = True
