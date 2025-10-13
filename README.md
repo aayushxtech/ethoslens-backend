@@ -51,7 +51,11 @@ DATABASE_URL="postgresql://<username>:<password>@<host>/<database>?sslmode=requi
 
 ### 5. Initialize the Database
 
-The database tables will be automatically created when you run the application. Ensure your database is accessible.
+To initialize the shared database, run the following command:
+
+```bash
+python3.13 -m app.init_db #Windows python -m app.init_db.py
+```
 
 ### 6. Run Database Migrations
 
