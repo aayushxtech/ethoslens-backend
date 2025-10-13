@@ -53,6 +53,14 @@ DATABASE_URL="postgresql://<username>:<password>@<host>/<database>?sslmode=requi
 
 The database tables will be automatically created when you run the application. Ensure your database is accessible.
 
+### 6. Run Database Migrations
+
+Before starting the server, run the migration script to initialize the database:
+
+```bash
+python migrate.py
+```
+
 ---
 
 ### 1. Start the FastAPI Server
