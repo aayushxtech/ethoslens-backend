@@ -34,3 +34,11 @@ class ColumnSuggestion(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ConfirmColumnsRequest(BaseModel):
+    target_column: str
+    sensitive_columns: List[str] = []
+
+    class Config:
+        orm_mode = True

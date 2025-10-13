@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.services.dataset import process_upload
 from app.db.session import get_db
 from app.models.dataset import Dataset
-from app.schemas.dataset_schema import DatasetResponse, ColumnSchema, ColumnSuggestion
+from app.schemas.dataset_schema import DatasetResponse, ColumnSchema, ColumnSuggestion, ConfirmColumnsRequest
 
 from app.utils.file_utils import allowed_file
 from app.utils.llm_utils import call_llm
@@ -83,4 +83,42 @@ async def suggest_columns(dataset_id: int, db: Session = Depends(get_db)):
         suggestions = json.loads(llm_response)
     except Exception:
         suggestions = {"target_column": None, "sensitive_columns": []}
+
+
+@router.post("/datasets/{dataset_id}/confirm_columns", response_model=DatasetResponse)
+async def confirm_columns(dataset_id: int, request: ConfirmColumnsRequest, db: Session = Depends(get_db)):
+    # Fetch dataset
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Validate columns
+    import pandas as pd
+    df = pd.read_csv(dataset.file_path, nrows=1)
+    all_columns = df.columns.tolist()
+
+    if request.target_column not in all_columns:
+        raise HTTPException(
+            status_code=400, detail="Target column does not exist in dataset")
+    for col in request.sensitive_columns:
+        if col not in all_columns:
+            raise HTTPException(
+                status_code=400, detail=f"Sensitive column '{col}' does not exist in dataset")
+
+    # Update dataset
+    dataset.target_column = request.target_column
+    dataset.sensitive_columns = ",".join(request.sensitive_columns)
+    dataset.status = "confirmed"
+    db.commit()
+    db.refresh(dataset)
+
+    # Return response as list, not CSV
+    return {
+        "message": "Columns confirmed successfully",
+        "dataset_id": dataset.id,
+        "target_column": dataset.target_column,
+        "sensitive_columns": request.sensitive_columns
+    }
+
+
 # Additional endpoints for listing datasets, retrieving details, updating metadata, and deleting datasets can be added here.
