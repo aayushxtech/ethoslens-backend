@@ -4,17 +4,6 @@ This is the backend for the EthosLens project, built with FastAPI. It provides u
 
 ---
 
-## **Table of Contents**
-
-- [Features](#features)
-- [Requirements](#requirements)
-- [Setup Instructions](#setup-instructions)
-- [Running the Application](#running-the-application)
-- [API Endpoints](#api-endpoints)
-- [Development Notes](#development-notes)
-
----
-
 ## **Features**
 
 - User registration and login with hashed passwords.
