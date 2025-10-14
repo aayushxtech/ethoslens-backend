@@ -10,7 +10,7 @@ class Model(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     report = Column(JSON, default={})  # JSON report of model evaluation
     score = Column(Float, default=0)  # Overall model score
-    suggestions = Column(String, default={})  # Suggestions for improvement
+    suggestions = Column(String, default="")  # Suggestions for improvement (string default)
 
     jailbreak_events = relationship("JailbreakEvent", back_populates="model", cascade="all, delete-orphan")
 
@@ -22,8 +22,3 @@ class Model(Base):
         if not self.report:
             self.report = {}
         self.report[key] = value
-
-
-
-
-    # creator = relationship("User", back_populates="models")
