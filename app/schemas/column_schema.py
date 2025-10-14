@@ -1,6 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
-from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 
 class ColumnStats(BaseModel):
@@ -10,6 +10,12 @@ class ColumnStats(BaseModel):
     missing_percentage: float
     unique_count: int
     stats: Dict[str, Any]  # numeric stats, top/freq for categorical
+
+    # New optional fields returned in responses
+    example_value: Optional[Any] = None
+    top_values: Optional[Dict[str, int]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         orm_mode = True

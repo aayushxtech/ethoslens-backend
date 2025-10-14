@@ -9,6 +9,7 @@ from app.schemas.dataset_schema import DatasetEvaluationResponse
 from app.schemas.column_schema import ColumnResponse
 from app.utils.data_loader import load_dataframe as load_data
 from app.utils.eval_utils import run_data_quality_tests
+from app.utils.llm_utils import call_llm
 
 router = APIRouter()
 
@@ -124,3 +125,37 @@ def get_dataset_evaluation(dataset_id: int, db: Session = Depends(get_db)):
         columns=columns,
         tests=test_results,
     )
+
+
+@router.post("/datasets/{dataset_id}/predict_target_column")
+def predict_target_column(dataset_id: int, user_input: str, db: Session = Depends(get_db)):
+    """
+    Predict the target column of a dataset using an LLM based on user input.
+    """
+    # Fetch Dataset
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Extract column names
+    columns = [col.get("column_name") for col in (dataset.schema or [])]
+    if not columns:
+        raise HTTPException(
+            status_code=400, detail="No columns found in the dataset schema")
+
+    # Prepare the LLM prompt
+    prompt = (
+        f"You are an AI assistant. Based on the following dataset columns: {', '.join(columns)}, "
+        f"and the user's input: '{user_input}', predict the most likely target column. "
+        "The target column is the one that the user wants to predict or analyze."
+        "Make sure to respond with only the column name, without any additional text."
+    )
+
+    # Call the LLM
+    try:
+        predicted_column = call_llm(prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calling LLM: {e}")
+
+    # Return only the predicted column name
+    return predicted_column
