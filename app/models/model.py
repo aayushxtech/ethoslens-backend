@@ -5,7 +5,7 @@ from app.db.session import Base
 
 class Model(Base):
     __tablename__ = "models"
-
+    
     id = Column(Integer, primary_key=True)
     model_id = Column(String, unique=True, index=True,
                       nullable=False)  # Unique model identifier
