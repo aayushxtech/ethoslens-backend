@@ -1,14 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, datasets
+from app.config import settings  # <- import settings
+import app.models  # <- ensure all model modules are imported and mappers registered
 
 app = FastAPI()
 
-# Allow front-end running on port 3000
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# Use configured origins (reads from app.config.settings)
+origins = settings.ALLOWED_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
