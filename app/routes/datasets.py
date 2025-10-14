@@ -40,7 +40,7 @@ async def upload_dataset(file: UploadFile = File(...), db: Session = Depends(get
     )
 
 
-async def _update_dataset_columns(dataset: Dataset, target: Optional[str], sensitive: List[str], db: Session, status: str = "confirmed") -> Dataset:
+def _update_dataset_columns(dataset: Dataset, target: Optional[str], sensitive: List[str], db: Session, status: str = "confirmed") -> Dataset:
     """
     Helper: persist target and sensitive columns (saves as JSON list).
     Returns refreshed dataset.

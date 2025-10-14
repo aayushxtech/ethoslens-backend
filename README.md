@@ -1,56 +1,41 @@
 # EthosLens Backend
 
-Backend for EthosLens built with FastAPI. Provides user auth (register/login), JWTs, dataset upload + schema analysis (LLM-assisted), and a simple SQLAlchemy/Postgres setup for an MVP.
+Backend for EthosLens built with FastAPI. Provides user auth (register/login), JWTs, dataset upload + schema analysis (LLM-assisted), dataset evaluation, and a simple SQLAlchemy/Postgres setup for an MVP.
 
 ---
 
 ## Table of Contents
 - Requirements
-- Quick setup (Linux/macOS & Windows)
+- Quick setup
 - Environment variables
 - Database initialization
 - Run the server
-- API Reference
-  - Auth
-  - Datasets
-- LLM notes
-- Troubleshooting
+- API Reference (all endpoints)
+- Notes / Troubleshooting
 
 ---
 
-## Requirements
-- Python 3.10+ (3.13 recommended)
-- PostgreSQL (shared dev DB)
-- Git, a terminal
+## Quick setup
 
 Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## Quick setup
-
-Clone repo
-```bash
-git clone https://github.com/aayushxtech/ethoslens-backend.git
-cd backend
-```
-
-Create & activate venv
-
-Linux / macOS
+Create & activate venv (Linux/macOS):
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-Windows (PowerShell)
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+Run server:
+```bash
+uvicorn app.main:app --reload
 ```
+
+Open API docs:
+- Swagger UI: http://127.0.0.1:8000/docs
+- ReDoc: http://127.0.0.1:8000/redoc
 
 ---
 
@@ -62,225 +47,135 @@ DATABASE_URL="postgresql://<username>:<password>@<host>/<database>?sslmode=requi
 SECRET_KEY="replace_with_secure_random"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
-GROQ_API_KEY="gsk_xxx"   # required if using LLM endpoints
+GROQ_API_KEY="gsk_xxx"   # required for LLM suggestions
 ```
 
-.env is ignored by git.
-
-Settings are read from `app/config.py` (Pydantic BaseSettings).
+Settings are read from `app/config.py`.
 
 ---
 
 ## Database initialization
 
-Initialize the shared development DB (creates tables from SQLAlchemy models):
-
-Linux / macOS
+Create tables:
 ```bash
-python3.13 -m app.init_db
-```
-
-Windows
-```powershell
-py -3.13 -m app.init_db
-# or
 python -m app.init_db
-```
-
-Alternative:
-```bash
+# or
 python migrate.py
 ```
 
-For production use Alembic for versioned migrations.
-
 ---
 
-## Run the server
-
-Linux / macOS
-```bash
-uvicorn app.main:app --reload
-```
-
-Windows (PowerShell / cmd)
-```powershell
-uvicorn app.main:app --reload
-```
-
-Open API docs:
-- Swagger UI: http://127.0.0.1:8000/docs
-- ReDoc: http://127.0.0.1:8000/redoc
-
----
-
-## API Reference
+## API Reference — Endpoints
 
 Base: http://127.0.0.1:8000
 
-All dataset endpoints are prefixed with `/datasets` (router in `app/main.py`).
+All dataset endpoints are logically under `/datasets` (some route files include full paths). Authentication under `/auth`, posts under `/posts`.
 
-Schema models referenced below come from:
-- `app/schemas/auth_schema.py`
-- `app/schemas/dataset_schema.py`
-- `app/schemas/column_schema.py`
+Auth
+- POST /auth/register  
+  - Body (JSON): { "username": str, "email": str, "password": str }  
+  - Success: 200 { "message": "User registered successfully" }
 
-### Auth
+- POST /auth/login  
+  - Body (JSON): { "email": str, "password": str }  
+  - Success: 200 -> Token model: { "access_token": "<jwt>", "token_type": "bearer" }
 
-1) Register
-- POST `/auth/register`
-- Body (application/json):
-```json
-{
-  "username": "test",
-  "email": "test@gmail.com",
-  "password": "test123@"
-}
-```
-- Success: 200
-```json
-{ "message": "User registered successfully" }
-```
-- Errors:
-  - 400 if email already exists
-  - 422 if request body invalid
+Datasets
+- POST /datasets/upload  
+  - multipart/form-data: file (csv|xlsx|json|parquet|zip)  
+  - Saves file, analyzes preview, creates Dataset row.  
+  - Response: DatasetResponse (see schemas) with stored schema array.
 
-2) Login
-- POST `/auth/login`
-- Body:
-```json
-{
-  "email": "test@gmail.com",
-  "password": "test123@"
-}
-```
-- Success: 200
-```json
-{
-  "access_token": "<jwt_token>",
-  "token_type": "bearer"
-}
-```
-- Errors:
-  - 401 invalid credentials
-  - 422 validation error
+- POST /datasets/{dataset_id}/suggest_columns  
+  - No body. Calls LLM to suggest target and sensitive columns based on preview.  
+  - Persists suggestions (status="suggested").  
+  - Response: ColumnSuggestion { "target_column": str|null, "sensitive_columns": [str] }
 
-### Datasets
+- POST /datasets/{dataset_id}/update_columns  
+  - Body (JSON): ConfirmColumnsRequest { "target_column": str, "sensitive_columns": [str] }  
+  - Validates columns exist in uploaded file, persists as confirmed.  
+  - Response: DatasetResponse (updated)
 
-1) Upload dataset
-- POST `/datasets/upload`
-- Form field: `file` (multipart/form-data)
-- Supported types: csv, xlsx, json, parquet, zip (zip parsing not implemented)
-- Response model: `DatasetResponse` (`app/schemas/dataset_schema.py`)
-Example response (200):
-```json
-{
-  "id": 1,
-  "name": "housing.csv",
-  "file_type": "csv",
-  "file_path": "uploads/xxxx.csv",
-  "row_count": 1000,
-  "target_column": null,
-  "sensitive_columns": [],
-  "columns": [
-    {
-      "column_name": "Price",
-      "column_type": "float64",
-      "null_count": 0,
-      "unique_count": 1000,
-      "example_value": 1059033.558
-    }
-  ],
-  "status": "pending"
-}
-```
+- PUT /datasets/{dataset_id}/confirm  
+  - If no body: returns current suggestion + dataset schema (DatasetResponse).  
+  - If body (ConfirmColumnsRequest): validate & persist corrections, return updated DatasetResponse.
 
-2) Suggest target & sensitive columns (LLM)
+- GET /datasets/{dataset_id}/evaluation  
+  - Loads preview (up to 1000 rows), runs data quality + fairness tests and returns DatasetEvaluationResponse:  
+    - dataset_id, dataset_name, total_rows, columns (ColumnResponse list)  
+    - tests: List[TestResult] — includes missing_values, duplicate_rows, constant_columns, high_cardinality_columns, numeric_stats, skewness, kurtosis, fairness_disparity (when applicable).
+  - Useful for UI to show per-column stats and quality/fairness warnings.
 
-- POST `/datasets/{dataset_id}/suggest_columns`
-- No body required.
-- Calls LLM to analyze dataset preview and returns `ColumnSuggestion`:
+Posts
+- POST /posts/  (create post)  
+  - Body: PostCreate { title, content }  
+  - Response: ResponsePost (created post)
 
-```json
-{
-  "target_column": "Price",
-  "sensitive_columns": ["Address"]
-}
-```
+- GET /posts/  (list posts)  
+  - Response: list[ResponsePost]
 
-- Behavior:
-  - Persists suggestions to DB (`target_column`, `sensitive_columns`, status="suggested")
-  - Requires `GROQ_API_KEY` configured for LLM (see LLM notes).
-- Errors:
-  - 404 dataset not found
-  - 500 LLM / parsing errors (falls back to empty suggestion)
+- GET /posts/{post_id}  (single post)  
+  - Response: ResponsePost
 
-3) Update columns (explicit save)
+- PUT /posts/{post_id}  (update post)  
+  - Body: PostUpdate (partial OK)  
+  - Response: ResponsePost
 
-- POST `/datasets/{dataset_id}/update_columns`
-- Body (`ConfirmColumnsRequest`):
+- DELETE /posts/{post_id}  
+  - Deletes post, returns 204 or success detail.
 
-```json
-{
-  "target_column": "Price",
-  "sensitive_columns": ["Address"]
-}
-```
+- POST /posts/{post_id}/upvote  
+  - Increments upvotes, returns { upvotes, downvotes }
 
-- Validates columns exist in the uploaded file, persists them (`status="confirmed"`), returns `DatasetResponse`.
-- Errors:
-  - 400 column not present
-  - 404 dataset not found
-
-4) Confirm / review endpoint (GET/PUT behavior implemented as PUT)
-
-- PUT `/datasets/{dataset_id}/confirm`
-- If no body is provided: returns current suggestion and dataset schema (for UI preview).
-- If body (ConfirmColumnsRequest) is provided: validates and persists corrections, returns updated `DatasetResponse`.
-- Use this endpoint so users can correct LLM suggestions manually.
+- POST /posts/{post_id}/downvote  
+  - Increments downvotes, returns { upvotes, downvotes }
 
 ---
 
-## LLM notes
-
-- LLM client initialized in `app/utils/llm_utils.py` and reads `GROQ_API_KEY` via `app/config.py`.
-- If GROQ_API_KEY missing, LLM calls will raise. For local testing you can:
-  - Set GROQ_API_KEY in `.env`
-  - Or mock `app.utils.llm_utils.call_llm` in tests
-
-Prompt engineering and result parsing include robust JSON extraction; however, the LLM can still return unexpected formats — UI should present suggestions and allow user correction.
+## Schemas (where to look)
+- DatasetResponse, DatasetEvaluationResponse, TestResult: `app/schemas/dataset_schema.py`
+- ColumnResponse / ColumnStats: `app/schemas/column_schema.py`
+- Auth models: `app/schemas/auth_schema.py`
+- Post models: `app/schemas/post_schema.py`
 
 ---
 
-## Testing from Swagger UI
-
-1. Start server: `uvicorn app.main:app --reload`
-2. Open: http://127.0.0.1:8000/docs
-3. Use `/datasets/upload` to upload a CSV.
-4. Call `/datasets/{id}/suggest_columns` to get/save suggestions.
-5. If suggestion is wrong, call `/datasets/{id}/confirm` (PUT) with corrected JSON.
+## What evaluations are run (run_data_quality_tests)
+Implemented in `app/utils/eval_utils.py` — returns a list of TestResult entries:
+- missing_values (per-column % missing; warning if >20%)
+- duplicate_rows
+- constant_columns
+- high_cardinality_columns (unique > 100)
+- numeric_stats (pandas .describe: count, mean, std, min, 25%, 50%, 75%, max)
+- skewness (scipy.stats.skew)
+- kurtosis (scipy.stats.kurtosis)
+- fairness_disparity (requires target + sensitive column; computes group means and disparity_ratio)
 
 ---
 
-## Troubleshooting
+## Notes / Troubleshooting
+- Ensure `.env` contains DATABASE_URL and GROQ_API_KEY (if using LLM).  
+- If you see SQLAlchemy mapper errors, make sure `import app.models` is executed (done in `app/main.py`).  
+- For DB connection drops, enable pool_pre_ping in `app/db/session.py` (recommended) and check DB logs.  
+- To include/exclude tests or change thresholds, edit `app/utils/eval_utils.py`.
 
-- Pydantic BaseSettings ValidationError: make sure keys in `.env` are declared in `app/config.py` or set `extra="allow"` in settings Config.
-- 422 errors: request body doesn't match Pydantic schema — check field names and types.
-- 405 Method Not Allowed: use correct HTTP method (e.g., suggest is POST).
-- LLM errors: ensure `GROQ_API_KEY` present or mock calls during dev.
-- DB connection errors: verify `DATABASE_URL` and that shared DB is reachable.
+---
+
+## Development tips
+- Use Swagger UI to test endpoints quickly.  
+- Upload a CSV via `/datasets/upload`, then call `/datasets/{id}/suggest_columns` -> `/datasets/{id}/confirm` -> `/datasets/{id}/evaluation` to see full flow.
 
 ---
 
 ## Project structure (important files)
+- app/main.py — FastAPI app and route registration  
+- app/routes/*.py — API endpoints (auth, datasets, posts, evaluation)  
+- app/services/*.py — business logic (upload processing)  
+- app/models/*.py — SQLAlchemy models  
+- app/schemas/*.py — Pydantic schemas  
+- app/db/session.py — DB engine & session  
+- app/utils/* — helpers (file handling, LLM, evaluation)
 
-- app/main.py — FastAPI app and route registration
-- app/routes/auth.py — auth endpoints
-- app/routes/datasets.py — dataset upload / suggestion / confirm
-- app/services/*.py — business logic
-- app/models/*.py — SQLAlchemy models (Dataset, DatasetColumn, User)
-- app/schemas/*.py — Pydantic schemas
-- app/db/session.py — DB engine & session
-- app/init_db.py / migrate.py — create tables
-- app/utils/llm_utils.py — Groq LLM client wrapper
-- app/utils/file_utils.py — file save / preview helpers
+---
+
+If you want, I can open and patch `README.md` in your workspace directly or add curl examples for each endpoint.

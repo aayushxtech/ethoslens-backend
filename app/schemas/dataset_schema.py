@@ -51,6 +51,7 @@ class DatasetEvaluationResponse(BaseModel):
     dataset_name: str
     total_rows: int
     columns: List[ColumnResponse]
+    tests: Optional[List["TestResult"]] = []
 
 
 class TestResult(BaseModel):
