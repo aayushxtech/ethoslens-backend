@@ -12,4 +12,5 @@ class User(Base):
     password = Column(String, nullable=False)
     posts = relationship("Post", back_populates="user")
     profile = relationship("Profile", back_populates="user", uselist=False)
-    
+    models = relationship("Model", backref="creator")
+   

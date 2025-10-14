@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, datasets, post, profile
+from app.routes import auth, datasets, post, profile, model
 from app.routes import auth, datasets, post, dataset_evaluation
 from app.config import settings  # <- import settings
 import app.models  # <- ensure all model modules are imported and mappers registered
@@ -25,6 +25,7 @@ app.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
 app.include_router(post.router, tags=["posts"])
 app.include_router(profile.router, tags=["profile"])
 app.include_router(dataset_evaluation.router, tags=["dataset_evaluation"])
+app.include_router(model.router, tags=["model"])
 
 
 @app.get("/")

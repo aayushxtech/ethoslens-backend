@@ -4,6 +4,9 @@ from app.models.dataset import Dataset  # Import Dataset model here
 from app.models.columns import DatasetColumn  # Import DatasetColumn model here
 from app.models.post import Post  # Import Post model here
 from app.models.profile import Profile  # Import Profile model here
+from app.models.model import Model  # Import Model model here
+from app.models.jailbreak_event import JailbreakEvent  # Import JailbreakEvent model here
+
 
 
 def run_migrations():
