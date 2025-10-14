@@ -51,3 +51,16 @@ class DatasetEvaluationResponse(BaseModel):
     dataset_name: str
     total_rows: int
     columns: List[ColumnResponse]
+
+
+class TestResult(BaseModel):
+    test_name: str
+    status: str
+    details: Optional[Dict[str, Any]] = None
+    suggestion: Optional[str] = None
+
+
+class EvaluationResponse(BaseModel):
+    dataset_id: int
+    dataset_name: str
+    fairness: Optional[List[TestResult]] = []
