@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.db.session import Base
 
 
@@ -18,3 +19,5 @@ class Dataset(Base):
     status = Column(String, default="pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    columns = relationship(
+        "DatasetColumn", back_populates="dataset", cascade="all, delete-orphan")

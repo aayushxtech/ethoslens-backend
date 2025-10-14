@@ -1,5 +1,7 @@
+from typing import Dict, Any
 from pydantic import BaseModel
-from typing import List, Optional, Any
+from typing import Dict, List, Optional, Any
+from app.schemas.column_schema import ColumnResponse
 
 
 class ColumnSchema(BaseModel):
@@ -42,3 +44,10 @@ class ConfirmColumnsRequest(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class DatasetEvaluationResponse(BaseModel):
+    dataset_id: int
+    dataset_name: str
+    total_rows: int
+    columns: List[ColumnResponse]

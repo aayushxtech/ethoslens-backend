@@ -1,6 +1,7 @@
 from app.db.session import engine, Base
 from app.models.user import User  # Import User model here
 from app.models.dataset import Dataset  # Import Dataset model here
+from app.models.columns import DatasetColumn  # Import DatasetColumn model here
 
 
 def run_migrations():
