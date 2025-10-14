@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.post import Post
+from app.models.profile import Profile
 from app.schemas.post_schema import PostCreate, PostUpdate, ResponsePost
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -15,6 +16,12 @@ async def create_post(post: PostCreate, db: Session = Depends(get_db), user_id: 
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
+
+    profile = db.query(Profile).filter(Profile.user_id==user_id).first()
+    if profile:
+        profile.add_post()
+        db.commit()
+        db.refresh(profile)
     return new_post
 
 # Get all post
@@ -60,6 +67,12 @@ async def delete_post(post_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Post not found")
     db.delete(post)
     db.commit()
+
+    profile = db.query(Profile).filter(Profile.user_id==post.user_id).first()
+    if profile:
+        profile.remove_post()
+        db.commit()
+        db.refresh(profile)
     return {"detail": "Post deleted successfully"}
 
 # Upvote

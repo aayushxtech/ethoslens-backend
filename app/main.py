@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes import auth, datasets, post, profile
 from app.routes import auth, datasets, post, dataset_evaluation
 from app.config import settings  # <- import settings
 import app.models  # <- ensure all model modules are imported and mappers registered
@@ -21,6 +22,8 @@ app.add_middleware(
 # Include authentication routes
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
+app.include_router(post.router)
+app.include_router(profile.router)
 app.include_router(post.router, prefix="/posts", tags=["posts"])
 app.include_router(dataset_evaluation.router, tags=["dataset_evaluation"])
 
