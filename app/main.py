@@ -22,9 +22,8 @@ app.add_middleware(
 # Include authentication routes
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
-app.include_router(post.router)
-app.include_router(profile.router)
-app.include_router(post.router, prefix="/posts", tags=["posts"])
+app.include_router(post.router, tags=["posts"])
+app.include_router(profile.router, tags=["profile"])
 app.include_router(dataset_evaluation.router, tags=["dataset_evaluation"])
 
 
